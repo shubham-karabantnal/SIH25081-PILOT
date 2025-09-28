@@ -1,0 +1,818 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KMRL AI Induction Planning & Scheduling Platform</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            box-sizing: border-box;
+        }
+        .train-marker {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            position: absolute;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.2); opacity: 0.7; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .schedule-item {
+            transition: all 0.3s ease;
+        }
+        .schedule-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        .dragging {
+            opacity: 0.5;
+            transform: rotate(5deg);
+        }
+        .notification-slide {
+            animation: slideIn 0.5s ease-out;
+        }
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        .ai-glow {
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
+            animation: aiPulse 3s ease-in-out infinite;
+        }
+        @keyframes aiPulse {
+            0%, 100% { box-shadow: 0 0 20px rgba(59, 130, 246, 0.3); }
+            50% { box-shadow: 0 0 30px rgba(59, 130, 246, 0.5); }
+        }
+        .depot-animation {
+            animation: depotActivity 4s ease-in-out infinite;
+        }
+        @keyframes depotActivity {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900 min-h-screen text-white">
+    <!-- Header -->
+    <header class="bg-gradient-to-r from-blue-800 to-indigo-800 shadow-2xl border-b-4 border-blue-400">
+        <div class="max-w-7xl mx-auto px-6 py-4">
+            <div class="flex justify-between items-center">
+                <div class="flex items-center space-x-4">
+                    <div class="w-12 h-12 bg-gradient-to-br from-blue-400 to-blue-600 rounded-xl flex items-center justify-center shadow-lg">
+                        <span class="text-white font-bold text-xl">K</span>
+                    </div>
+                    <div>
+                        <h1 class="text-2xl font-bold text-white">KMRL AI Induction Platform</h1>
+                        <p class="text-blue-200 text-sm">Intelligent Train Planning & Scheduling System</p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <div class="bg-green-500 w-3 h-3 rounded-full animate-pulse"></div>
+                    <span class="text-green-300 text-sm font-medium">AI Engine Active</span>
+                    <div class="text-right">
+                        <p class="text-white font-medium">Night Shift Operations</p>
+                        <p class="text-blue-200 text-sm" id="current-time">23:45 IST</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Navigation -->
+    <nav class="bg-slate-800 shadow-lg">
+        <div class="max-w-7xl mx-auto px-6">
+            <div class="flex space-x-8">
+                <button class="nav-btn bg-blue-600 text-white px-6 py-3 font-medium hover:bg-blue-700 transition-colors border-b-2 border-blue-400" onclick="showModule('dashboard')">
+                    🏠 Dashboard
+                </button>
+                <button class="nav-btn text-gray-300 px-6 py-3 font-medium hover:bg-slate-700 hover:text-white transition-colors" onclick="showModule('induction')">
+                    🚊 Induction Planning
+                </button>
+                <button class="nav-btn text-gray-300 px-6 py-3 font-medium hover:bg-slate-700 hover:text-white transition-colors" onclick="showModule('scheduling')">
+                    📅 Night Scheduling
+                </button>
+                <button class="nav-btn text-gray-300 px-6 py-3 font-medium hover:bg-slate-700 hover:text-white transition-colors" onclick="showModule('maintenance')">
+                    🔧 Maintenance Integration
+                </button>
+                <button class="nav-btn text-gray-300 px-6 py-3 font-medium hover:bg-slate-700 hover:text-white transition-colors" onclick="showModule('analytics')">
+                    📊 AI Analytics
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="max-w-7xl mx-auto px-6 py-8">
+        <!-- Dashboard Module -->
+        <div id="dashboard-module" class="module">
+            <!-- Hero Section -->
+            <div class="bg-gradient-to-r from-blue-800 to-indigo-800 rounded-2xl p-8 mb-8 ai-glow">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+                    <div>
+                        <h2 class="text-3xl font-bold text-white mb-4">AI-Driven Train Induction Planning</h2>
+                        <p class="text-blue-200 text-lg mb-6">Automated decision-support platform for optimizing nightly train induction operations at KMRL</p>
+                        <div class="flex space-x-4">
+                            <button class="bg-green-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-green-700 transition-colors shadow-lg" onclick="startAIPlanning()">
+                                🤖 Start AI Planning
+                            </button>
+                            <button class="bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors shadow-lg" onclick="viewCurrentPlan()">
+                                📋 View Current Plan
+                            </button>
+                        </div>
+                    </div>
+                    <div class="text-center">
+                        <div class="bg-white/10 rounded-xl p-6 backdrop-blur-sm">
+                            <h3 class="text-xl font-bold text-white mb-4">Tonight's Operations</h3>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div class="text-center">
+                                    <p class="text-3xl font-bold text-green-400" id="trains-ready">18</p>
+                                    <p class="text-blue-200 text-sm">Trains Ready</p>
+                                </div>
+                                <div class="text-center">
+                                    <p class="text-3xl font-bold text-yellow-400" id="induction-slots">24</p>
+                                    <p class="text-blue-200 text-sm">Induction Slots</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Key Metrics -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                <div class="bg-gradient-to-br from-green-600 to-green-700 rounded-xl p-6 shadow-lg">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-green-100 text-sm font-medium">Fleet Availability</p>
+                            <p class="text-3xl font-bold text-white" id="fleet-availability">94.2%</p>
+                            <p class="text-green-200 text-xs">↑ 2.1% from yesterday</p>
+                        </div>
+                        <div class="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
+                            <span class="text-2xl">🚊</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="bg-gradient-to-br from-blue-600 to-blue-700 rounded-xl p-6 shadow-lg">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-blue-100 text-sm font-medium">AI Efficiency</p>
+                            <p class="text-3xl font-bold text-white" id="ai-efficiency">97.8%</p>
+                            <p class="text-blue-200 text-xs">Planning accuracy</p>
+                        </div>
+                        <div class="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
+                            <span class="text-2xl">🤖</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="bg-gradient-to-br from-purple-600 to-purple-700 rounded-xl p-6 shadow-lg">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-purple-100 text-sm font-medium">Energy Optimization</p>
+                            <p class="text-3xl font-bold text-white" id="energy-savings">15.3%</p>
+                            <p class="text-purple-200 text-xs">Cost reduction</p>
+                        </div>
+                        <div class="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
+                            <span class="text-2xl">⚡</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="bg-gradient-to-br from-orange-600 to-orange-700 rounded-xl p-6 shadow-lg">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-orange-100 text-sm font-medium">Maintenance Sync</p>
+                            <p class="text-3xl font-bold text-white" id="maintenance-sync">100%</p>
+                            <p class="text-orange-200 text-xs">Integration status</p>
+                        </div>
+                        <div class="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
+                            <span class="text-2xl">🔧</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Live Operations Map -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                <div class="bg-slate-800 rounded-xl p-6 shadow-lg">
+                    <h3 class="text-xl font-bold text-white mb-4">🗺️ Live Metro Network</h3>
+                    <div class="relative bg-slate-900 rounded-lg h-80 overflow-hidden">
+                        <!-- Metro Line Representation -->
+                        <svg class="absolute inset-0 w-full h-full">
+                            <!-- Main Blue Line -->
+                            <line x1="50" y1="160" x2="550" y2="160" stroke="#3B82F6" stroke-width="6"/>
+                            <!-- Green Line Extension -->
+                            <line x1="300" y1="160" x2="300" y2="80" stroke="#10B981" stroke-width="6"/>
+                            
+                            <!-- Stations -->
+                            <circle cx="100" cy="160" r="10" fill="#1F2937" stroke="#3B82F6" stroke-width="2"/>
+                            <circle cx="200" cy="160" r="10" fill="#1F2937" stroke="#3B82F6" stroke-width="2"/>
+                            <circle cx="300" cy="160" r="10" fill="#1F2937" stroke="#3B82F6" stroke-width="2"/>
+                            <circle cx="400" cy="160" r="10" fill="#1F2937" stroke="#3B82F6" stroke-width="2"/>
+                            <circle cx="500" cy="160" r="10" fill="#1F2937" stroke="#3B82F6" stroke-width="2"/>
+                            <circle cx="300" cy="120" r="10" fill="#1F2937" stroke="#10B981" stroke-width="2"/>
+                            
+                            <!-- Station Labels -->
+                            <text x="100" y="185" text-anchor="middle" class="text-xs fill-blue-300">Aluva</text>
+                            <text x="200" y="185" text-anchor="middle" class="text-xs fill-blue-300">Kalamassery</text>
+                            <text x="300" y="185" text-anchor="middle" class="text-xs fill-blue-300">Edapally</text>
+                            <text x="400" y="185" text-anchor="middle" class="text-xs fill-blue-300">MG Road</text>
+                            <text x="500" y="185" text-anchor="middle" class="text-xs fill-blue-300">Maharajas</text>
+                            <text x="300" y="105" text-anchor="middle" class="text-xs fill-green-300">Kakkanad</text>
+                        </svg>
+                        
+                        <!-- Train Markers -->
+                        <div class="train-marker bg-green-400" style="left: 120px; top: 154px;" title="Train T001 - In Service"></div>
+                        <div class="train-marker bg-blue-400" style="left: 250px; top: 154px;" title="Train T003 - In Service"></div>
+                        <div class="train-marker bg-yellow-400" style="left: 380px; top: 154px;" title="Train T005 - Returning to Depot"></div>
+                        <div class="train-marker bg-green-400" style="left: 294px; top: 130px;" title="Train T007 - In Service"></div>
+                        
+                        <!-- Muttom Depot -->
+                        <div class="absolute bottom-4 right-4 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm depot-animation">
+                            🏭 Muttom Depot
+                        </div>
+                    </div>
+                </div>
+
+                <!-- AI Planning Status -->
+                <div class="bg-slate-800 rounded-xl p-6 shadow-lg">
+                    <h3 class="text-xl font-bold text-white mb-4">🤖 AI Planning Engine</h3>
+                    <div class="space-y-4">
+                        <div class="bg-green-900/50 border border-green-500 rounded-lg p-4">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-green-300 font-medium">Demand Forecasting</span>
+                                <span class="text-green-400 text-sm">✓ Complete</span>
+                            </div>
+                            <div class="w-full bg-green-900 rounded-full h-2">
+                                <div class="bg-green-500 h-2 rounded-full" style="width: 100%"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-blue-900/50 border border-blue-500 rounded-lg p-4">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-blue-300 font-medium">Maintenance Integration</span>
+                                <span class="text-blue-400 text-sm">🔄 Processing</span>
+                            </div>
+                            <div class="w-full bg-blue-900 rounded-full h-2">
+                                <div class="bg-blue-500 h-2 rounded-full animate-pulse" style="width: 75%"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-purple-900/50 border border-purple-500 rounded-lg p-4">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-purple-300 font-medium">Optimal Schedule Generation</span>
+                                <span class="text-purple-400 text-sm">⏳ Queued</span>
+                            </div>
+                            <div class="w-full bg-purple-900 rounded-full h-2">
+                                <div class="bg-purple-500 h-2 rounded-full" style="width: 25%"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-slate-700 rounded-lg p-4 mt-6">
+                            <h4 class="text-white font-medium mb-2">Next AI Recommendation</h4>
+                            <p class="text-gray-300 text-sm">Optimize induction sequence for 6 trains between 00:30-02:00 to maximize tomorrow's peak hour coverage.</p>
+                            <button class="mt-3 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700 transition-colors" onclick="implementAIRecommendation()">
+                                Implement Recommendation
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Real-time Alerts -->
+            <div class="bg-slate-800 rounded-xl p-6 shadow-lg">
+                <h3 class="text-xl font-bold text-white mb-4">🚨 Real-time Operations Center</h3>
+                <div id="alerts-container" class="space-y-3">
+                    <div class="flex items-center justify-between bg-green-900/30 border-l-4 border-green-500 p-4 rounded-lg">
+                        <div class="flex items-center">
+                            <span class="text-green-400 mr-3 text-xl">✅</span>
+                            <div>
+                                <p class="font-medium text-white">Train T012 Induction Complete</p>
+                                <p class="text-sm text-gray-300">Successfully inducted at 23:42. Ready for tomorrow's 05:30 service.</p>
+                            </div>
+                        </div>
+                        <span class="bg-green-600 text-white px-3 py-1 rounded-full text-xs">Completed</span>
+                    </div>
+                    
+                    <div class="flex items-center justify-between bg-blue-900/30 border-l-4 border-blue-500 p-4 rounded-lg">
+                        <div class="flex items-center">
+                            <span class="text-blue-400 mr-3 text-xl">🤖</span>
+                            <div>
+                                <p class="font-medium text-white">AI Optimization Alert</p>
+                                <p class="text-sm text-gray-300">Detected opportunity to reduce energy consumption by 8% with revised induction timing.</p>
+                            </div>
+                        </div>
+                        <button class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700 transition-colors" onclick="reviewOptimization()">
+                            Review
+                        </button>
+                    </div>
+                    
+                    <div class="flex items-center justify-between bg-yellow-900/30 border-l-4 border-yellow-500 p-4 rounded-lg">
+                        <div class="flex items-center">
+                            <span class="text-yellow-400 mr-3 text-xl">⚠️</span>
+                            <div>
+                                <p class="font-medium text-white">Maintenance Window Conflict</p>
+                                <p class="text-sm text-gray-300">Train T008 scheduled maintenance overlaps with planned induction. AI suggests alternative.</p>
+                            </div>
+                        </div>
+                        <button class="bg-yellow-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-yellow-700 transition-colors" onclick="resolveConflict()">
+                            Resolve
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Induction Planning Module -->
+        <div id="induction-module" class="module hidden">
+            <div class="bg-slate-800 rounded-xl p-6 shadow-lg mb-8">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold text-white">🚊 AI-Driven Induction Planning</h2>
+                    <div class="flex space-x-3">
+                        <button class="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors" onclick="runAIOptimization()">
+                            🤖 Run AI Optimization
+                        </button>
+                        <button class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors" onclick="generateInductionPlan()">
+                            📋 Generate Plan
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Induction Timeline -->
+                <div class="bg-slate-900 rounded-lg p-6 mb-6">
+                    <h3 class="text-lg font-medium text-white mb-4">Tonight's Induction Timeline (00:00 - 05:00)</h3>
+                    <div class="relative">
+                        <!-- Timeline -->
+                        <div class="flex justify-between text-xs text-gray-400 mb-2">
+                            <span>00:00</span>
+                            <span>01:00</span>
+                            <span>02:00</span>
+                            <span>03:00</span>
+                            <span>04:00</span>
+                            <span>05:00</span>
+                        </div>
+                        <div class="w-full bg-slate-700 h-2 rounded-full mb-4"></div>
+                        
+                        <!-- Induction Blocks -->
+                        <div class="space-y-3">
+                            <div class="flex items-center space-x-4">
+                                <div class="w-16 text-sm text-gray-300">T001</div>
+                                <div class="flex-1 relative">
+                                    <div class="bg-green-600 h-6 rounded" style="width: 15%; margin-left: 10%;"></div>
+                                    <span class="absolute left-0 top-7 text-xs text-green-400">00:30-01:00</span>
+                                </div>
+                                <span class="text-xs text-green-400">✓ Optimal</span>
+                            </div>
+                            
+                            <div class="flex items-center space-x-4">
+                                <div class="w-16 text-sm text-gray-300">T003</div>
+                                <div class="flex-1 relative">
+                                    <div class="bg-blue-600 h-6 rounded" style="width: 20%; margin-left: 25%;"></div>
+                                    <span class="absolute left-0 top-7 text-xs text-blue-400">01:15-02:00</span>
+                                </div>
+                                <span class="text-xs text-blue-400">🤖 AI Suggested</span>
+                            </div>
+                            
+                            <div class="flex items-center space-x-4">
+                                <div class="w-16 text-sm text-gray-300">T005</div>
+                                <div class="flex-1 relative">
+                                    <div class="bg-yellow-600 h-6 rounded" style="width: 18%; margin-left: 45%;"></div>
+                                    <span class="absolute left-0 top-7 text-xs text-yellow-400">02:30-03:15</span>
+                                </div>
+                                <span class="text-xs text-yellow-400">⚠️ Conflict</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Train Fleet Status -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="bg-green-900/30 border border-green-500 rounded-lg p-4">
+                        <h3 class="font-medium text-green-300 mb-3">✅ Ready for Induction (12)</h3>
+                        <div class="space-y-2 max-h-40 overflow-y-auto">
+                            <div class="flex justify-between items-center bg-slate-700 p-2 rounded text-sm">
+                                <span class="text-white">T001</span>
+                                <span class="text-green-400">Ready</span>
+                            </div>
+                            <div class="flex justify-between items-center bg-slate-700 p-2 rounded text-sm">
+                                <span class="text-white">T003</span>
+                                <span class="text-green-400">Ready</span>
+                            </div>
+                            <div class="flex justify-between items-center bg-slate-700 p-2 rounded text-sm">
+                                <span class="text-white">T005</span>
+                                <span class="text-green-400">Ready</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-yellow-900/30 border border-yellow-500 rounded-lg p-4">
+                        <h3 class="font-medium text-yellow-300 mb-3">⚠️ Maintenance Required (4)</h3>
+                        <div class="space-y-2 max-h-40 overflow-y-auto">
+                            <div class="flex justify-between items-center bg-slate-700 p-2 rounded text-sm">
+                                <span class="text-white">T007</span>
+                                <span class="text-yellow-400">2 hrs</span>
+                            </div>
+                            <div class="flex justify-between items-center bg-slate-700 p-2 rounded text-sm">
+                                <span class="text-white">T009</span>
+                                <span class="text-yellow-400">4 hrs</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-red-900/30 border border-red-500 rounded-lg p-4">
+                        <h3 class="font-medium text-red-300 mb-3">🔧 Under Maintenance (2)</h3>
+                        <div class="space-y-2 max-h-40 overflow-y-auto">
+                            <div class="flex justify-between items-center bg-slate-700 p-2 rounded text-sm">
+                                <span class="text-white">T011</span>
+                                <span class="text-red-400">6 hrs left</span>
+                            </div>
+                            <div class="flex justify-between items-center bg-slate-700 p-2 rounded text-sm">
+                                <span class="text-white">T013</span>
+                                <span class="text-red-400">12 hrs left</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Night Scheduling Module -->
+        <div id="scheduling-module" class="module hidden">
+            <div class="bg-slate-800 rounded-xl p-6 shadow-lg">
+                <h2 class="text-2xl font-bold text-white mb-6">📅 Automated Night Scheduling</h2>
+                
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <!-- Schedule Optimization -->
+                    <div class="bg-slate-900 rounded-lg p-6">
+                        <h3 class="text-lg font-medium text-white mb-4">🎯 Schedule Optimization</h3>
+                        <canvas id="scheduleChart" style="width: 100%; height: 300px;"></canvas>
+                    </div>
+                    
+                    <!-- AI Recommendations -->
+                    <div class="bg-slate-900 rounded-lg p-6">
+                        <h3 class="text-lg font-medium text-white mb-4">🤖 AI Recommendations</h3>
+                        <div class="space-y-4">
+                            <div class="bg-blue-900/30 border border-blue-500 rounded-lg p-4">
+                                <h4 class="text-blue-300 font-medium mb-2">Peak Hour Optimization</h4>
+                                <p class="text-gray-300 text-sm mb-3">Increase morning peak frequency by 12% based on historical demand patterns.</p>
+                                <button class="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700 transition-colors" onclick="applyRecommendation('peak')">Apply</button>
+                            </div>
+                            
+                            <div class="bg-green-900/30 border border-green-500 rounded-lg p-4">
+                                <h4 class="text-green-300 font-medium mb-2">Energy Efficiency</h4>
+                                <p class="text-gray-300 text-sm mb-3">Adjust induction timing to reduce energy costs by ₹15,000 per night.</p>
+                                <button class="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700 transition-colors" onclick="applyRecommendation('energy')">Apply</button>
+                            </div>
+                            
+                            <div class="bg-purple-900/30 border border-purple-500 rounded-lg p-4">
+                                <h4 class="text-purple-300 font-medium mb-2">Maintenance Sync</h4>
+                                <p class="text-gray-300 text-sm mb-3">Coordinate with maintenance schedule to minimize service disruption.</p>
+                                <button class="bg-purple-600 text-white px-3 py-1 rounded text-sm hover:bg-purple-700 transition-colors" onclick="applyRecommendation('maintenance')">Apply</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Maintenance Integration Module -->
+        <div id="maintenance-module" class="module hidden">
+            <div class="bg-slate-800 rounded-xl p-6 shadow-lg">
+                <h2 class="text-2xl font-bold text-white mb-6">🔧 Maintenance Integration</h2>
+                
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                    <!-- Maintenance Schedule -->
+                    <div class="bg-slate-900 rounded-lg p-6">
+                        <h3 class="text-lg font-medium text-white mb-4">📋 Tonight's Maintenance Schedule</h3>
+                        <div class="space-y-3">
+                            <div class="bg-slate-700 rounded-lg p-4">
+                                <div class="flex justify-between items-center mb-2">
+                                    <span class="text-white font-medium">Train T007</span>
+                                    <span class="bg-yellow-600 text-white px-2 py-1 rounded-full text-xs">In Progress</span>
+                                </div>
+                                <p class="text-gray-300 text-sm">Brake system inspection - Est. 2 hours remaining</p>
+                                <div class="w-full bg-slate-600 rounded-full h-2 mt-2">
+                                    <div class="bg-yellow-500 h-2 rounded-full" style="width: 60%"></div>
+                                </div>
+                            </div>
+                            
+                            <div class="bg-slate-700 rounded-lg p-4">
+                                <div class="flex justify-between items-center mb-2">
+                                    <span class="text-white font-medium">Train T011</span>
+                                    <span class="bg-blue-600 text-white px-2 py-1 rounded-full text-xs">Scheduled</span>
+                                </div>
+                                <p class="text-gray-300 text-sm">Routine maintenance - Starts at 02:00</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Integration Status -->
+                    <div class="bg-slate-900 rounded-lg p-6">
+                        <h3 class="text-lg font-medium text-white mb-4">🔄 System Integration</h3>
+                        <div class="space-y-4">
+                            <div class="flex items-center justify-between">
+                                <span class="text-gray-300">Maintenance Management System</span>
+                                <span class="text-green-400">✓ Connected</span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span class="text-gray-300">Fleet Management System</span>
+                                <span class="text-green-400">✓ Connected</span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span class="text-gray-300">Energy Management System</span>
+                                <span class="text-green-400">✓ Connected</span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span class="text-gray-300">Passenger Information System</span>
+                                <span class="text-green-400">✓ Connected</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- AI Analytics Module -->
+        <div id="analytics-module" class="module hidden">
+            <div class="bg-slate-800 rounded-xl p-6 shadow-lg">
+                <h2 class="text-2xl font-bold text-white mb-6">📊 AI Analytics & Insights</h2>
+                
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                    <!-- Performance Analytics -->
+                    <div class="bg-slate-900 rounded-lg p-6">
+                        <h3 class="text-lg font-medium text-white mb-4">📈 Performance Trends</h3>
+                        <canvas id="performanceChart" style="width: 100%; height: 250px;"></canvas>
+                    </div>
+                    
+                    <!-- Cost Optimization -->
+                    <div class="bg-slate-900 rounded-lg p-6">
+                        <h3 class="text-lg font-medium text-white mb-4">💰 Cost Optimization</h3>
+                        <canvas id="costChart" style="width: 100%; height: 250px;"></canvas>
+                    </div>
+                </div>
+                
+                <!-- AI Insights -->
+                <div class="bg-slate-900 rounded-lg p-6">
+                    <h3 class="text-lg font-medium text-white mb-4">🧠 AI-Generated Insights</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div class="bg-blue-900/30 border border-blue-500 rounded-lg p-4">
+                            <h4 class="text-blue-300 font-medium mb-2">Demand Prediction</h4>
+                            <p class="text-gray-300 text-sm">Tomorrow's peak demand expected to increase by 8% due to local events.</p>
+                        </div>
+                        
+                        <div class="bg-green-900/30 border border-green-500 rounded-lg p-4">
+                            <h4 class="text-green-300 font-medium mb-2">Efficiency Gains</h4>
+                            <p class="text-gray-300 text-sm">AI optimization has improved fleet utilization by 15% this month.</p>
+                        </div>
+                        
+                        <div class="bg-purple-900/30 border border-purple-500 rounded-lg p-4">
+                            <h4 class="text-purple-300 font-medium mb-2">Predictive Maintenance</h4>
+                            <p class="text-gray-300 text-sm">3 trains require attention within next 48 hours based on sensor data.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Toast -->
+    <div id="notification-toast" class="fixed top-4 right-4 bg-blue-600 text-white px-6 py-3 rounded-lg shadow-lg hidden notification-slide">
+        <div class="flex items-center">
+            <span class="mr-2">🤖</span>
+            <span id="notification-text">AI system notification</span>
+        </div>
+    </div>
+
+    <script>
+        // Module Navigation
+        function showModule(moduleId) {
+            document.querySelectorAll('.module').forEach(module => {
+                module.classList.add('hidden');
+            });
+            
+            document.getElementById(moduleId + '-module').classList.remove('hidden');
+            
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('bg-blue-600', 'text-white', 'border-b-2', 'border-blue-400');
+                btn.classList.add('text-gray-300');
+            });
+            
+            event.target.classList.add('bg-blue-600', 'text-white', 'border-b-2', 'border-blue-400');
+            event.target.classList.remove('text-gray-300');
+        }
+
+        // Initialize Charts
+        function initializeCharts() {
+            // Schedule Chart
+            const scheduleCtx = document.getElementById('scheduleChart');
+            if (scheduleCtx) {
+                new Chart(scheduleCtx, {
+                    type: 'line',
+                    data: {
+                        labels: ['00:00', '01:00', '02:00', '03:00', '04:00', '05:00'],
+                        datasets: [{
+                            label: 'Planned Inductions',
+                            data: [2, 4, 3, 5, 2, 1],
+                            borderColor: '#3B82F6',
+                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                            tension: 0.4
+                        }, {
+                            label: 'AI Optimized',
+                            data: [3, 3, 4, 4, 3, 0],
+                            borderColor: '#10B981',
+                            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                            tension: 0.4,
+                            borderDash: [5, 5]
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                labels: {
+                                    color: '#E5E7EB'
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                ticks: { color: '#9CA3AF' },
+                                grid: { color: '#374151' }
+                            },
+                            y: {
+                                ticks: { color: '#9CA3AF' },
+                                grid: { color: '#374151' }
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Performance Chart
+            const performanceCtx = document.getElementById('performanceChart');
+            if (performanceCtx) {
+                new Chart(performanceCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                        datasets: [{
+                            label: 'Efficiency %',
+                            data: [94, 96, 98, 95, 97, 93, 95],
+                            backgroundColor: '#3B82F6'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                labels: {
+                                    color: '#E5E7EB'
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                ticks: { color: '#9CA3AF' },
+                                grid: { color: '#374151' }
+                            },
+                            y: {
+                                ticks: { color: '#9CA3AF' },
+                                grid: { color: '#374151' },
+                                beginAtZero: true,
+                                max: 100
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Cost Chart
+            const costCtx = document.getElementById('costChart');
+            if (costCtx) {
+                new Chart(costCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Energy', 'Maintenance', 'Operations', 'Staff'],
+                        datasets: [{
+                            data: [45, 25, 20, 10],
+                            backgroundColor: ['#3B82F6', '#10B981', '#F59E0B', '#EF4444']
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                labels: {
+                                    color: '#E5E7EB'
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        // AI Functions
+        function startAIPlanning() {
+            showNotification('AI planning engine initiated. Analyzing current fleet status and demand patterns...');
+            setTimeout(() => {
+                showNotification('AI has generated optimal induction plan with 15% efficiency improvement!');
+            }, 3000);
+        }
+
+        function viewCurrentPlan() {
+            showModule('induction');
+            showNotification('Displaying current AI-optimized induction plan');
+        }
+
+        function runAIOptimization() {
+            showNotification('Running AI optimization algorithms...');
+            setTimeout(() => {
+                showNotification('Optimization complete! Found 3 improvement opportunities.');
+            }, 2500);
+        }
+
+        function generateInductionPlan() {
+            showNotification('Generating comprehensive induction plan based on AI recommendations...');
+        }
+
+        function implementAIRecommendation() {
+            showNotification('AI recommendation implemented successfully!');
+        }
+
+        function reviewOptimization() {
+            showNotification('Opening optimization review panel...');
+        }
+
+        function resolveConflict() {
+            showNotification('Conflict resolved using AI alternative scheduling.');
+        }
+
+        function applyRecommendation(type) {
+            const messages = {
+                'peak': 'Peak hour optimization applied successfully!',
+                'energy': 'Energy efficiency measures implemented!',
+                'maintenance': 'Maintenance synchronization activated!'
+            };
+            showNotification(messages[type]);
+        }
+
+        // Notification System
+        function showNotification(message) {
+            const toast = document.getElementById('notification-toast');
+            const text = document.getElementById('notification-text');
+            text.textContent = message;
+            toast.classList.remove('hidden');
+            
+            setTimeout(() => {
+                toast.classList.add('hidden');
+            }, 4000);
+        }
+
+        // Update Time
+        function updateTime() {
+            const now = new Date();
+            const timeString = now.toLocaleTimeString('en-IN', { 
+                timeZone: 'Asia/Kolkata',
+                hour12: false 
+            }) + ' IST';
+            document.getElementById('current-time').textContent = timeString;
+        }
+
+        // Real-time Updates
+        function updateMetrics() {
+            const metrics = ['fleet-availability', 'ai-efficiency', 'energy-savings', 'maintenance-sync'];
+            metrics.forEach(metric => {
+                const element = document.getElementById(metric);
+                if (element && metric !== 'maintenance-sync') {
+                    const current = parseFloat(element.textContent);
+                    const variation = (Math.random() - 0.5) * 2;
+                    const newValue = Math.max(85, Math.min(99, current + variation));
+                    element.textContent = newValue.toFixed(1) + (metric === 'energy-savings' ? '%' : '%');
+                }
+            });
+        }
+
+        // Initialize everything
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeCharts();
+            updateTime();
+            setInterval(updateTime, 1000);
+            setInterval(updateMetrics, 15000);
+            
+            setTimeout(() => {
+                showNotification('Welcome to KMRL AI Induction Planning Platform! System ready for night operations.');
+            }, 1500);
+        });
+    </script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'986237c727ae7eac',t:'MTc1OTA1MTc4Mi4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
